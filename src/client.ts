@@ -5,12 +5,19 @@ export interface RegisterOptions {
   capabilities?: string[];
   apiUrl?: string;
   apiKey?: string;
+  /** Bearer token from wallet auth (alternative to apiKey). */
+  userToken?: string;
+  /** Base64url-encoded Ed25519 public key for BYOK mode. */
+  publicKey?: string;
+  /** Owner wallet address (for platform-key auth). */
+  ownerId?: string;
 }
 
 export interface RegisterResponse {
   did: string;
   public_key: string;
-  private_key: string;
+  /** Only present in legacy mode (when publicKey was not provided). */
+  private_key?: string;
   chain_status: "pending" | "anchored" | "failed";
   created_at: string;
 }
@@ -41,15 +48,25 @@ export async function registerAgent(
   };
   if (options.apiKey) {
     headers["X-Platform-Key"] = options.apiKey;
+  } else if (options.userToken) {
+    headers["Authorization"] = `Bearer ${options.userToken}`;
+  }
+
+  const body: Record<string, unknown> = {
+    name: options.name,
+    capabilities: options.capabilities,
+  };
+  if (options.publicKey) {
+    body.public_key = options.publicKey;
+  }
+  if (options.ownerId) {
+    body.owner_id = options.ownerId;
   }
 
   const response = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify({
-      name: options.name,
-      capabilities: options.capabilities,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

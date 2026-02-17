@@ -5,6 +5,7 @@ import {
   sha256Hex,
   base64urlEncode,
   base64urlDecode,
+  generateKeypair,
   generateNonce,
 } from "./crypto.js";
 import { validateDid } from "./did.js";
@@ -38,13 +39,19 @@ export class AgentIdentity {
 
   /**
    * Register a new agent identity with the registry.
-   * Returns an AgentIdentity with signing capabilities.
+   *
+   * Generates the Ed25519 keypair locally (BYOK). The private key never
+   * leaves the client. Only the public key is sent to the registry.
    */
   static async register(options: RegisterOptions): Promise<AgentIdentity> {
-    const result = await registerAgent(options);
+    // Generate keypair locally — private key never leaves the client
+    const { privateKey, publicKey } = generateKeypair();
+    const publicKeyB64 = base64urlEncode(publicKey);
 
-    const publicKey = base64urlDecode(result.public_key);
-    const privateKey = base64urlDecode(result.private_key);
+    const result = await registerAgent({
+      ...options,
+      publicKey: publicKeyB64,
+    });
 
     return new AgentIdentity(result.did, privateKey, publicKey);
   }
