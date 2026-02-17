@@ -28,6 +28,20 @@
     "vitest": "^3.0.0"
   },
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-agent-id/agent-id-js"
+  },
+  "homepage": "https://openagentid.org",
+  "keywords": [
+    "agent",
+    "identity",
+    "did",
+    "ed25519",
+    "verification",
+    "ai-agent",
+    "open-agent-id"
+  ],
   "engines": {
     "node": ">=18.0.0"
   }
