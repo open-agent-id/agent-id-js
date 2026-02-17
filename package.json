@@ -1,5 +1,5 @@
 {
-  "name": "@openagentid/sdk",
+  "name": "@open-agent-id/sdk",
   "version": "0.1.0",
   "description": "JavaScript/TypeScript SDK for Open Agent ID — register, sign, and verify AI agent identities",
   "type": "module",

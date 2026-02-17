@@ -1,11 +1,11 @@
-# @openagentid/sdk
+# @open-agent-id/sdk
 
 JavaScript/TypeScript SDK for [Open Agent ID](https://openagentid.org) -- register, sign, and verify AI agent identities.
 
 ## Installation
 
 ```bash
-npm install @openagentid/sdk
+npm install @open-agent-id/sdk
 ```
 
 Requires Node.js >= 18.
@@ -15,7 +15,7 @@ Requires Node.js >= 18.
 ### Register a new agent
 
 ```typescript
-import { AgentIdentity } from "@openagentid/sdk";
+import { AgentIdentity } from "@open-agent-id/sdk";
 
 const agent = await AgentIdentity.register({
   name: "my-search-agent",
@@ -128,7 +128,7 @@ import {
   parseDid,
   generateUniqueId,
   PublicKeyCache,
-} from "@openagentid/sdk";
+} from "@open-agent-id/sdk";
 ```
 
 ## Development
