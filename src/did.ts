@@ -1,26 +1,15 @@
-const BASE62_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+/**
+ * V2 DID format: did:oaid:{chain}:{agent_address}
+ * - chain: lowercase string (e.g. "base")
+ * - agent_address: 0x + 40 lowercase hex chars
+ */
 
-const DID_REGEX =
-  /^did:agent:([a-z0-9]{3,20}):(agt_[0-9A-Za-z]{10})$/;
+const DID_REGEX = /^did:oaid:([a-z][a-z0-9]*):((0x[0-9a-f]{40}))$/;
 
 export interface ParsedDid {
   method: string;
-  platform: string;
-  uniqueId: string;
-}
-
-/**
- * Validate a DID string against the Open Agent ID format rules.
- *
- * Rules:
- * 1. Method MUST be "agent"
- * 2. Platform MUST be 3-20 characters, lowercase [a-z0-9]
- * 3. Unique ID MUST start with "agt_" followed by exactly 10 base62 characters
- * 4. Total DID length MUST NOT exceed 60 characters
- */
-export function validateDid(did: string): boolean {
-  if (!did || did.length > 60) return false;
-  return DID_REGEX.test(did);
+  chain: string;
+  agentAddress: string;
 }
 
 /**
@@ -33,20 +22,30 @@ export function parseDid(did: string): ParsedDid {
   }
   const match = did.match(DID_REGEX)!;
   return {
-    method: "agent",
-    platform: match[1],
-    uniqueId: match[2],
+    method: "oaid",
+    chain: match[1],
+    agentAddress: match[2],
   };
 }
 
 /**
- * Generate a unique ID in the format agt_ + 10 base62 characters.
+ * Validate a DID string against the V2 Open Agent ID format.
  */
-export function generateUniqueId(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(10));
-  let id = "agt_";
-  for (let i = 0; i < 10; i++) {
-    id += BASE62_CHARS[bytes[i] % 62];
+export function validateDid(did: string): boolean {
+  if (!did || did.length > 100) return false;
+  return DID_REGEX.test(did);
+}
+
+/**
+ * Format a DID from chain and agent address components.
+ * Normalizes address to lowercase.
+ */
+export function formatDid(chain: string, agentAddress: string): string {
+  const did = `did:oaid:${chain.toLowerCase()}:${agentAddress.toLowerCase()}`;
+  if (!validateDid(did)) {
+    throw new Error(
+      `Cannot format valid DID from chain="${chain}", agentAddress="${agentAddress}"`,
+    );
   }
-  return id;
+  return did;
 }

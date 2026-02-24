@@ -1,18 +1,41 @@
-export { AgentIdentity } from "./identity.js";
-export type { AgentInfo } from "./client.js";
+// DID
+export { parseDid, validateDid, formatDid } from "./did.js";
+export type { ParsedDid } from "./did.js";
+
+// Signing
 export {
-  generateKeypair,
-  sign,
-  verify,
-  sha256Hex,
+  signHttpRequest,
+  verifyHttpSignature,
+  signMessage,
+  verifyMessageSignature,
+  canonicalUrl,
+  canonicalJson,
+} from "./signing.js";
+
+// Signer
+export { Signer } from "./signer.js";
+
+// Registry client
+export { RegistryClient } from "./client.js";
+export type { AgentInfo, AuthOptions } from "./client.js";
+
+// Agent
+export { Agent } from "./agent.js";
+
+// Crypto utilities
+export {
+  generateEd25519Keypair,
+  ed25519Sign,
+  ed25519Verify,
   base64urlEncode,
   base64urlDecode,
-  hexToBytes,
-  bytesToHexString,
+  sha256,
   generateNonce,
 } from "./crypto.js";
-export { validateDid, parseDid, generateUniqueId } from "./did.js";
-export type { ParsedDid } from "./did.js";
-export { registerAgent, getAgent } from "./client.js";
-export type { RegisterOptions, RegisterResponse } from "./client.js";
-export { PublicKeyCache } from "./cache.js";
+
+// Constants
+export {
+  DEFAULT_EXPIRE_SECONDS,
+  HTTP_TIMESTAMP_TOLERANCE,
+  DEDUP_CACHE_TTL,
+} from "./constants.js";

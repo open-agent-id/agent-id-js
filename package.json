@@ -1,6 +1,6 @@
 {
-  "name": "@open-agent-id/sdk",
-  "version": "0.1.1",
+  "name": "@openagentid/sdk",
+  "version": "0.2.0",
   "description": "JavaScript/TypeScript SDK for Open Agent ID — register, sign, and verify AI agent identities",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,13 +30,14 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/open-agent-id/agent-id-js"
+    "url": "https://github.com/openagentid/agent-id-js"
   },
   "homepage": "https://openagentid.org",
   "keywords": [
     "agent",
     "identity",
     "did",
+    "oaid",
     "ed25519",
     "verification",
     "ai-agent",

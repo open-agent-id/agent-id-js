@@ -1,125 +1,112 @@
 import { describe, it, expect } from "vitest";
 import {
-  generateKeypair,
-  sign,
-  verify,
-  sha256Hex,
+  generateEd25519Keypair,
+  ed25519Sign,
+  ed25519Verify,
   base64urlEncode,
   base64urlDecode,
-  hexToBytes,
-  bytesToHexString,
+  sha256,
   generateNonce,
 } from "../src/crypto.js";
 
-// Test vectors from the protocol spec
-const TEST_PRIVATE_KEY_HEX =
-  "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
-const TEST_PUBLIC_KEY_HEX =
-  "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
-const TEST_PUBLIC_KEY_BASE64URL =
-  "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo";
-
 describe("crypto", () => {
-  describe("generateKeypair", () => {
-    it("should generate a valid keypair", () => {
-      const kp = generateKeypair();
-      expect(kp.privateKey).toBeInstanceOf(Uint8Array);
-      expect(kp.publicKey).toBeInstanceOf(Uint8Array);
-      expect(kp.privateKey.length).toBe(32);
-      expect(kp.publicKey.length).toBe(32);
+  describe("generateEd25519Keypair", () => {
+    it("should generate a keypair with correct lengths", () => {
+      const { privateKey, publicKey } = generateEd25519Keypair();
+      expect(privateKey.length).toBe(32);
+      expect(publicKey.length).toBe(32);
     });
 
-    it("should generate different keypairs each time", () => {
-      const kp1 = generateKeypair();
-      const kp2 = generateKeypair();
-      expect(bytesToHexString(kp1.privateKey)).not.toBe(
-        bytesToHexString(kp2.privateKey),
-      );
+    it("should generate unique keypairs", () => {
+      const kp1 = generateEd25519Keypair();
+      const kp2 = generateEd25519Keypair();
+      expect(kp1.privateKey).not.toEqual(kp2.privateKey);
+      expect(kp1.publicKey).not.toEqual(kp2.publicKey);
     });
   });
 
-  describe("sign and verify", () => {
-    it("should sign and verify with generated keypair", () => {
-      const kp = generateKeypair();
-      const payload = new TextEncoder().encode("hello world");
-      const signature = sign(payload, kp.privateKey);
-      expect(signature).toBeInstanceOf(Uint8Array);
-      expect(signature.length).toBe(64);
-      expect(verify(payload, signature, kp.publicKey)).toBe(true);
+  describe("ed25519Sign / ed25519Verify", () => {
+    it("should sign and verify", () => {
+      const { privateKey, publicKey } = generateEd25519Keypair();
+      const data = new TextEncoder().encode("hello world");
+      const sig = ed25519Sign(privateKey, data);
+      expect(sig.length).toBe(64);
+      expect(ed25519Verify(publicKey, data, sig)).toBe(true);
     });
 
-    it("should fail verification with wrong public key", () => {
-      const kp1 = generateKeypair();
-      const kp2 = generateKeypair();
-      const payload = new TextEncoder().encode("hello world");
-      const signature = sign(payload, kp1.privateKey);
-      expect(verify(payload, signature, kp2.publicKey)).toBe(false);
+    it("should fail verification with wrong data", () => {
+      const { privateKey, publicKey } = generateEd25519Keypair();
+      const data = new TextEncoder().encode("hello");
+      const sig = ed25519Sign(privateKey, data);
+      const wrong = new TextEncoder().encode("world");
+      expect(ed25519Verify(publicKey, wrong, sig)).toBe(false);
     });
 
-    it("should fail verification with wrong payload", () => {
-      const kp = generateKeypair();
-      const payload = new TextEncoder().encode("hello world");
-      const wrong = new TextEncoder().encode("wrong payload");
-      const signature = sign(payload, kp.privateKey);
-      expect(verify(wrong, signature, kp.publicKey)).toBe(false);
-    });
-
-    it("should produce correct signature for empty payload (test vector)", () => {
-      const privateKey = hexToBytes(TEST_PRIVATE_KEY_HEX);
-      const publicKey = hexToBytes(TEST_PUBLIC_KEY_HEX);
-      const payload = new Uint8Array(0);
-      const signature = sign(payload, privateKey);
-      const expectedHex =
-        "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b";
-      expect(bytesToHexString(signature)).toBe(expectedHex);
-      expect(verify(payload, signature, publicKey)).toBe(true);
-    });
-  });
-
-  describe("sha256Hex", () => {
-    it("should compute SHA-256 of empty string", () => {
-      expect(sha256Hex("")).toBe(
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      );
-    });
-
-    it("should compute SHA-256 of JSON body", () => {
-      expect(sha256Hex('{"task":"search"}')).toBe(
-        "0dfd9a0e52fe94a5e6311a6ef4643304c65636ae7fc316a0334e91c9665370af",
-      );
+    it("should fail verification with wrong key", () => {
+      const kp1 = generateEd25519Keypair();
+      const kp2 = generateEd25519Keypair();
+      const data = new TextEncoder().encode("test");
+      const sig = ed25519Sign(kp1.privateKey, data);
+      expect(ed25519Verify(kp2.publicKey, data, sig)).toBe(false);
     });
   });
 
   describe("base64url", () => {
-    it("should round-trip encode/decode", () => {
-      const original = hexToBytes(TEST_PUBLIC_KEY_HEX);
+    it("should roundtrip encode/decode", () => {
+      const original = new Uint8Array([0, 1, 2, 255, 254, 253]);
       const encoded = base64urlEncode(original);
       const decoded = base64urlDecode(encoded);
-      expect(bytesToHexString(decoded)).toBe(TEST_PUBLIC_KEY_HEX);
+      expect(decoded).toEqual(original);
     });
 
-    it("should encode test vector public key correctly", () => {
-      const publicKey = hexToBytes(TEST_PUBLIC_KEY_HEX);
-      expect(base64urlEncode(publicKey)).toBe(TEST_PUBLIC_KEY_BASE64URL);
+    it("should produce no padding", () => {
+      const data = new Uint8Array([1, 2, 3]);
+      const encoded = base64urlEncode(data);
+      expect(encoded).not.toContain("=");
     });
 
-    it("should decode test vector public key correctly", () => {
-      const decoded = base64urlDecode(TEST_PUBLIC_KEY_BASE64URL);
-      expect(bytesToHexString(decoded)).toBe(TEST_PUBLIC_KEY_HEX);
+    it("should use URL-safe characters", () => {
+      const data = new Uint8Array([251, 255, 254]);
+      const encoded = base64urlEncode(data);
+      expect(encoded).not.toContain("+");
+      expect(encoded).not.toContain("/");
+    });
+
+    it("should handle empty input", () => {
+      const encoded = base64urlEncode(new Uint8Array(0));
+      expect(encoded).toBe("");
+      const decoded = base64urlDecode("");
+      expect(decoded).toEqual(new Uint8Array(0));
     });
   });
 
-  describe("hexToBytes / bytesToHexString", () => {
-    it("should round-trip", () => {
-      const hex = "deadbeef01020304";
-      expect(bytesToHexString(hexToBytes(hex))).toBe(hex);
+  describe("sha256", () => {
+    it("should produce lowercase hex", () => {
+      const data = new TextEncoder().encode("hello");
+      const hash = sha256(data);
+      expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("should produce correct hash for empty input", () => {
+      const hash = sha256(new Uint8Array(0));
+      expect(hash).toBe(
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      );
+    });
+
+    it("should produce correct hash for 'hello'", () => {
+      const data = new TextEncoder().encode("hello");
+      const hash = sha256(data);
+      expect(hash).toBe(
+        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+      );
     });
   });
 
   describe("generateNonce", () => {
     it("should generate a hex string of correct length", () => {
       const nonce = generateNonce(16);
-      expect(nonce.length).toBe(32); // 16 bytes = 32 hex chars
+      expect(nonce.length).toBe(32);
       expect(/^[0-9a-f]+$/.test(nonce)).toBe(true);
     });
 
