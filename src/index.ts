@@ -31,6 +31,10 @@ export {
   base64urlDecode,
   sha256,
   generateNonce,
+  ed25519ToX25519Public,
+  ed25519ToX25519Private,
+  encryptFor,
+  decryptFrom,
 } from "./crypto.js";
 
 // Constants

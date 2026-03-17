@@ -7,6 +7,10 @@ import {
   base64urlDecode,
   sha256,
   generateNonce,
+  ed25519ToX25519Public,
+  ed25519ToX25519Private,
+  encryptFor,
+  decryptFrom,
 } from "../src/crypto.js";
 
 describe("crypto", () => {
@@ -114,6 +118,81 @@ describe("crypto", () => {
       const n1 = generateNonce();
       const n2 = generateNonce();
       expect(n1).not.toBe(n2);
+    });
+  });
+
+  describe("e2e encryption", () => {
+    it("key conversion should be deterministic", () => {
+      const { privateKey, publicKey } = generateEd25519Keypair();
+      const x25519Pub1 = ed25519ToX25519Public(publicKey);
+      const x25519Pub2 = ed25519ToX25519Public(publicKey);
+      expect(x25519Pub1).toEqual(x25519Pub2);
+      expect(x25519Pub1.length).toBe(32);
+
+      const x25519Priv1 = ed25519ToX25519Private(privateKey);
+      const x25519Priv2 = ed25519ToX25519Private(privateKey);
+      expect(x25519Priv1).toEqual(x25519Priv2);
+      expect(x25519Priv1.length).toBe(32);
+    });
+
+    it("should encrypt and decrypt roundtrip", () => {
+      const sender = generateEd25519Keypair();
+      const recipient = generateEd25519Keypair();
+      const plaintext = new TextEncoder().encode("hello agent world");
+
+      const ciphertext = encryptFor(
+        plaintext,
+        recipient.publicKey,
+        sender.privateKey,
+      );
+
+      // nonce (24) + MAC (16) + plaintext
+      expect(ciphertext.length).toBe(24 + 16 + plaintext.length);
+
+      const decrypted = decryptFrom(
+        ciphertext,
+        sender.publicKey,
+        recipient.privateKey,
+      );
+      expect(decrypted).not.toBeNull();
+      expect(decrypted).toEqual(plaintext);
+    });
+
+    it("should fail decryption with wrong key", () => {
+      const sender = generateEd25519Keypair();
+      const recipient = generateEd25519Keypair();
+      const wrong = generateEd25519Keypair();
+      const plaintext = new TextEncoder().encode("secret message");
+
+      const ciphertext = encryptFor(
+        plaintext,
+        recipient.publicKey,
+        sender.privateKey,
+      );
+
+      const result = decryptFrom(
+        ciphertext,
+        sender.publicKey,
+        wrong.privateKey,
+      );
+      expect(result).toBeNull();
+    });
+
+    it("should encrypt and decrypt empty message", () => {
+      const sender = generateEd25519Keypair();
+      const recipient = generateEd25519Keypair();
+
+      const ciphertext = encryptFor(
+        new Uint8Array(0),
+        recipient.publicKey,
+        sender.privateKey,
+      );
+      const decrypted = decryptFrom(
+        ciphertext,
+        sender.publicKey,
+        recipient.privateKey,
+      );
+      expect(decrypted).toEqual(new Uint8Array(0));
     });
   });
 });
