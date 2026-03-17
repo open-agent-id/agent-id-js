@@ -1,134 +1,169 @@
-# @open-agent-id/sdk
+# @openagentid/sdk
 
-JavaScript/TypeScript SDK for [Open Agent ID](https://openagentid.org) -- register, sign, and verify AI agent identities.
+JavaScript/TypeScript SDK for [Open Agent ID](https://openagentid.org) -- register, sign, and verify AI agent identities on-chain.
 
 ## Installation
 
 ```bash
-npm install @open-agent-id/sdk
+npm install @openagentid/sdk
 ```
 
 Requires Node.js >= 18.
 
+## DID Format (V2)
+
+```
+did:oaid:{chain}:{address}
+```
+
+Examples:
+- `did:oaid:base:0x1234567890abcdef1234567890abcdef12345678`
+- `did:oaid:base-sepolia:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef`
+- `did:oaid:ethereum:0x0000000000000000000000000000000000000000`
+
 ## Quick Start
-
-### Register a new agent
-
-```typescript
-import { AgentIdentity } from "@open-agent-id/sdk";
-
-const agent = await AgentIdentity.register({
-  name: "my-search-agent",
-  capabilities: ["search", "summarize"],
-  apiKey: "your-platform-key",
-});
-
-console.log(agent.did);              // did:agent:tokli:agt_a1B2c3D4e5
-console.log(agent.publicKeyBase64url); // base64url-encoded public key
-
-// IMPORTANT: persist agent.did and the private key securely
-```
-
-### Load an existing agent
-
-```typescript
-const agent = AgentIdentity.load({
-  did: "did:agent:tokli:agt_a1B2c3D4e5",
-  privateKey: "base64url-encoded-private-key",
-});
-```
 
 ### Sign an HTTP request
 
 ```typescript
-const headers = agent.signRequest("POST", "https://api.example.com/v1/tasks", '{"task":"search"}');
+import { signHttpRequest, canonicalUrl } from "@openagentid/sdk";
+
+// Sign with a raw Ed25519 private key
+const headers = await signHttpRequest(
+  privateKey,          // Uint8Array (32 bytes)
+  "POST",
+  "https://api.example.com/v1/tasks",
+  new TextEncoder().encode('{"task":"search"}'),
+);
 // headers = {
-//   "X-Agent-DID": "did:agent:tokli:agt_a1B2c3D4e5",
 //   "X-Agent-Timestamp": "1708123456",
 //   "X-Agent-Nonce": "a3f1b2c4d5e6f7089012abcd",
 //   "X-Agent-Signature": "<base64url signature>"
 // }
+```
 
-const response = await fetch("https://api.example.com/v1/tasks", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    ...headers,
-  },
-  body: '{"task":"search"}',
+### Verify an HTTP signature
+
+```typescript
+import { verifyHttpSignature } from "@openagentid/sdk";
+
+const valid = verifyHttpSignature(
+  publicKey,           // Uint8Array (32 bytes)
+  "POST",
+  "https://api.example.com/v1/tasks",
+  bodyBytes,           // Uint8Array | null
+  timestamp,           // number (unix seconds)
+  nonce,               // string
+  signature,           // Uint8Array
+);
+```
+
+### Sign a P2P message
+
+```typescript
+import { signMessage } from "@openagentid/sdk";
+
+const signature = await signMessage(
+  privateKey,
+  "task.request",                          // message type
+  "msg-001",                               // message ID
+  "did:oaid:base:0xaaaa...aaaa",           // from DID
+  ["did:oaid:base:0xbbbb...bbbb"],         // to DIDs
+  null,                                    // ref
+  null,                                    // timestamp (auto)
+  null,                                    // expiresAt
+  { task: "summarize", url: "https://..." }, // body
+);
+```
+
+### Use the Signer daemon
+
+```typescript
+import { Signer, Agent } from "@openagentid/sdk";
+
+const signer = await Signer.connect("/tmp/oaid-signer.sock");
+const agent = new Agent({
+  keyId: "default",
+  signer,
+  did: "did:oaid:base:0x1234567890abcdef1234567890abcdef12345678",
+});
+
+// Signed HTTP requests via the Agent helper
+const res = await agent.http.post("https://api.example.com/v1/tasks", {
+  task: "search",
 });
 ```
 
-### Verify another agent's signature
+### Registry client
 
 ```typescript
-const valid = await AgentIdentity.verify({
-  did: "did:agent:openai:agt_X9yZ8wV7u6",
-  payload: canonicalPayload,
-  signature: signatureBase64url,
+import { RegistryClient } from "@openagentid/sdk";
+
+const registry = new RegistryClient();
+
+// Look up an agent
+const info = await registry.getAgent("did:oaid:base:0x1234...");
+
+// Wallet auth flow
+const { challengeId, challengeText } = await registry.requestChallenge(walletAddress);
+// ... sign challengeText with wallet ...
+const token = await registry.verifyWallet(walletAddress, challengeId, walletSignature);
+
+// Register an agent
+const agent = await registry.registerAgent(token, {
+  name: "my-agent",
+  capabilities: ["search"],
+  publicKey: base64urlPublicKey,
 });
 ```
 
-### Look up an agent
+### DID utilities
 
 ```typescript
-const info = await AgentIdentity.lookup("did:agent:tokli:agt_a1B2c3D4e5");
-console.log(info.name, info.status, info.capabilities);
+import { validateDid, parseDid, formatDid } from "@openagentid/sdk";
+
+validateDid("did:oaid:base:0x1234...abcd");  // true
+parseDid("did:oaid:base:0x1234...abcd");
+// { method: "oaid", chain: "base", agentAddress: "0x1234...abcd" }
+formatDid("base", "0x1234...abcd");
+// "did:oaid:base:0x1234...abcd"
 ```
 
-## API Reference
-
-### `AgentIdentity.register(options)`
-
-Register a new agent identity with the registry. Returns an `AgentIdentity` instance with signing capabilities.
-
-**Options:**
-- `name` (string, required) -- agent name
-- `capabilities` (string[], optional) -- list of capabilities
-- `apiUrl` (string, optional) -- registry API URL (default: `https://api.openagentid.org`)
-- `apiKey` (string, optional) -- platform API key
-
-### `AgentIdentity.load(options)`
-
-Load an existing identity from a DID and private key.
-
-**Options:**
-- `did` (string, required) -- the agent DID
-- `privateKey` (string, required) -- base64url-encoded private key
-
-### `agent.sign(payload)`
-
-Sign a string payload. Returns a base64url-encoded Ed25519 signature.
-
-### `agent.signRequest(method, url, body?)`
-
-Sign an HTTP request per the Open Agent ID signing spec. Returns a headers object with `X-Agent-DID`, `X-Agent-Timestamp`, `X-Agent-Nonce`, and `X-Agent-Signature`.
-
-### `AgentIdentity.verify(options)`
-
-Verify a signature against a DID's public key (fetched from registry).
-
-### `AgentIdentity.lookup(did, apiUrl?)`
-
-Look up agent information by DID.
-
-## Low-Level Utilities
-
-The SDK also exports low-level functions:
+### Canonical helpers
 
 ```typescript
-import {
-  generateKeypair,
-  sign,
-  verify,
-  sha256Hex,
-  base64urlEncode,
-  base64urlDecode,
-  validateDid,
-  parseDid,
-  generateUniqueId,
-  PublicKeyCache,
-} from "@open-agent-id/sdk";
+import { canonicalUrl, canonicalJson } from "@openagentid/sdk";
+
+canonicalUrl("https://API.example.com/path?b=2&a=1");
+// "https://api.example.com/path?a=1&b=2"
+
+canonicalJson({ z: 1, a: 2 });
+// '{"a":2,"z":1}'
+```
+
+## Exports
+
+```typescript
+// DID
+export { parseDid, validateDid, formatDid, ParsedDid };
+
+// Signing
+export { signHttpRequest, verifyHttpSignature, signMessage, verifyMessageSignature, canonicalUrl, canonicalJson };
+
+// Signer daemon client
+export { Signer };
+
+// Registry API client
+export { RegistryClient, AgentInfo, AuthOptions };
+
+// High-level Agent
+export { Agent };
+
+// Crypto utilities
+export { generateEd25519Keypair, ed25519Sign, ed25519Verify, base64urlEncode, base64urlDecode, sha256, generateNonce };
+
+// Constants
+export { DEFAULT_EXPIRE_SECONDS, HTTP_TIMESTAMP_TOLERANCE, DEDUP_CACHE_TTL };
 ```
 
 ## Development

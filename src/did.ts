@@ -4,7 +4,7 @@
  * - agent_address: 0x + 40 lowercase hex chars
  */
 
-const DID_REGEX = /^did:oaid:([a-z][a-z0-9]*):((0x[0-9a-f]{40}))$/;
+const DID_REGEX = /^did:oaid:([a-z0-9][a-z0-9-]{0,19}):(0x[0-9a-f]{40})$/;
 
 export interface ParsedDid {
   method: string;

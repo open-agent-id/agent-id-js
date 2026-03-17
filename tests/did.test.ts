@@ -6,6 +6,7 @@ const VALID_DIDS = [
   "did:oaid:ethereum:0x0000000000000000000000000000000000000000",
   "did:oaid:base:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
   "did:oaid:polygon:0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+  "did:oaid:base-sepolia:0x1234567890abcdef1234567890abcdef12345678",
 ];
 
 const INVALID_DIDS = [
@@ -19,6 +20,7 @@ const INVALID_DIDS = [
   "did:other:base:0x1234567890abcdef1234567890abcdef12345678", // wrong method
   "did:oaid:base:0x1234567890abcdef1234567890abcdef1234567g", // invalid hex char
   "did:oaid:base:0x1234567890abcdef1234567890abcdef123456789", // 41 hex chars
+  "did:oaid:-invalid:0x1234567890abcdef1234567890abcdef12345678", // chain starts with hyphen
 ];
 
 describe("did", () => {
