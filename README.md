@@ -1,11 +1,11 @@
-# @openagentid/sdk
+# @open-agent-id/sdk
 
 JavaScript/TypeScript SDK for [Open Agent ID](https://openagentid.org) -- register, sign, and verify AI agent identities on-chain.
 
 ## Installation
 
 ```bash
-npm install @openagentid/sdk
+npm install @open-agent-id/sdk
 ```
 
 Requires Node.js >= 18.
@@ -26,7 +26,7 @@ Examples:
 ### Sign an HTTP request
 
 ```typescript
-import { signHttpRequest, canonicalUrl } from "@openagentid/sdk";
+import { signHttpRequest, canonicalUrl } from "@open-agent-id/sdk";
 
 // Sign with a raw Ed25519 private key
 const headers = await signHttpRequest(
@@ -45,7 +45,7 @@ const headers = await signHttpRequest(
 ### Verify an HTTP signature
 
 ```typescript
-import { verifyHttpSignature } from "@openagentid/sdk";
+import { verifyHttpSignature } from "@open-agent-id/sdk";
 
 const valid = verifyHttpSignature(
   publicKey,           // Uint8Array (32 bytes)
@@ -61,7 +61,7 @@ const valid = verifyHttpSignature(
 ### Sign a P2P message
 
 ```typescript
-import { signMessage } from "@openagentid/sdk";
+import { signMessage } from "@open-agent-id/sdk";
 
 const signature = await signMessage(
   privateKey,
@@ -79,7 +79,7 @@ const signature = await signMessage(
 ### Use the Signer daemon
 
 ```typescript
-import { Signer, Agent } from "@openagentid/sdk";
+import { Signer, Agent } from "@open-agent-id/sdk";
 
 const signer = await Signer.connect("/tmp/oaid-signer.sock");
 const agent = new Agent({
@@ -97,7 +97,7 @@ const res = await agent.http.post("https://api.example.com/v1/tasks", {
 ### Registry client
 
 ```typescript
-import { RegistryClient } from "@openagentid/sdk";
+import { RegistryClient } from "@open-agent-id/sdk";
 
 const registry = new RegistryClient();
 
@@ -120,7 +120,7 @@ const agent = await registry.registerAgent(token, {
 ### DID utilities
 
 ```typescript
-import { validateDid, parseDid, formatDid } from "@openagentid/sdk";
+import { validateDid, parseDid, formatDid } from "@open-agent-id/sdk";
 
 validateDid("did:oaid:base:0x1234...abcd");  // true
 parseDid("did:oaid:base:0x1234...abcd");
@@ -132,7 +132,7 @@ formatDid("base", "0x1234...abcd");
 ### Canonical helpers
 
 ```typescript
-import { canonicalUrl, canonicalJson } from "@openagentid/sdk";
+import { canonicalUrl, canonicalJson } from "@open-agent-id/sdk";
 
 canonicalUrl("https://API.example.com/path?b=2&a=1");
 // "https://api.example.com/path?a=1&b=2"
