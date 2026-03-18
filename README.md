@@ -141,6 +141,20 @@ canonicalJson({ z: 1, a: 2 });
 // '{"a":2,"z":1}'
 ```
 
+### End-to-end encrypted messaging
+
+```typescript
+import { encryptFor, decryptFrom } from "@open-agent-id/sdk";
+
+// Encrypt for another agent
+const ciphertext = encryptFor(plaintext, recipientEd25519Pub, senderEd25519Priv);
+
+// Decrypt
+const plaintext = decryptFrom(ciphertext, senderEd25519Pub, recipientEd25519Priv);
+```
+
+Uses NaCl box (X25519-XSalsa20-Poly1305). The server never sees the plaintext.
+
 ## Exports
 
 ```typescript
@@ -161,6 +175,9 @@ export { Agent };
 
 // Crypto utilities
 export { generateEd25519Keypair, ed25519Sign, ed25519Verify, base64urlEncode, base64urlDecode, sha256, generateNonce };
+
+// E2E encryption
+export { encryptFor, decryptFrom };
 
 // Constants
 export { DEFAULT_EXPIRE_SECONDS, HTTP_TIMESTAMP_TOLERANCE, DEDUP_CACHE_TTL };
