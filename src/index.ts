@@ -17,7 +17,7 @@ export { Signer } from "./signer.js";
 
 // Registry client
 export { RegistryClient } from "./client.js";
-export type { AgentInfo, AuthOptions } from "./client.js";
+export type { AgentInfo, AuthOptions, CreditInfo } from "./client.js";
 
 // Agent
 export { Agent } from "./agent.js";

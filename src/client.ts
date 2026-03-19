@@ -12,6 +12,17 @@ export interface AgentInfo {
   updated_at: string;
 }
 
+export interface CreditInfo {
+  did: string;
+  credit_score: number;
+  level: string;
+  verified: boolean;
+  flagged: boolean;
+  active_reports: number;
+  lifetime_reports: number;
+  registered_at: string;
+}
+
 export interface AuthOptions {
   /** Bearer token from wallet auth. */
   token?: string;
@@ -237,6 +248,27 @@ export class RegistryClient {
         `Agent revocation failed (${res.status}): ${await res.text()}`,
       );
     }
+  }
+
+  /**
+   * Get an agent's credit score. Public endpoint, no auth required.
+   */
+  async getCredit(did: string): Promise<CreditInfo> {
+    const res = await fetch(
+      `${this.baseUrl}/v1/credit/${encodeURIComponent(did)}`,
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Credit lookup failed (${res.status}): ${await res.text()}`,
+      );
+    }
+
+    return (await res.json()) as CreditInfo;
   }
 
   /**
