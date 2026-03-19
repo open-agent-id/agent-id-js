@@ -145,19 +145,27 @@ export class RegistryClient {
   }
 
   /**
-   * List agents owned by a wallet address.
+   * List agents owned by the authenticated wallet.
    */
   async listAgents(
-    owner: string,
+    token: string,
     opts?: { limit?: number; cursor?: string },
   ): Promise<{ agents: AgentInfo[]; nextCursor?: string }> {
-    const params = new URLSearchParams({ owner });
+    const params = new URLSearchParams();
     if (opts?.limit) params.set("limit", String(opts.limit));
     if (opts?.cursor) params.set("cursor", opts.cursor);
 
-    const res = await fetch(`${this.baseUrl}/v1/agents?${params.toString()}`, {
+    const query = params.toString();
+    const url = query
+      ? `${this.baseUrl}/v1/agents?${query}`
+      : `${this.baseUrl}/v1/agents`;
+
+    const res = await fetch(url, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!res.ok) {
