@@ -2,12 +2,20 @@ const DEFAULT_API_URL = "https://api.openagentid.org";
 
 export interface AgentInfo {
   did: string;
-  name: string;
+  name?: string;
   public_key: string;
-  capabilities: string[];
+  wallet_address: string;
+  agent_address: string;
+  chain: string;
+  capabilities?: string[];
+  platform?: string;
+  endpoint?: string;
+  endpoint_type?: string;
   status: "active" | "revoked";
-  chain_status: "pending" | "anchored" | "failed";
-  chain_tx_hash: string | null;
+  chain_status: "pending" | "submitted" | "anchored";
+  chain_tx_hash?: string | null;
+  nonce?: number;
+  wallet_deployed?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -62,11 +70,11 @@ export class RegistryClient {
 
     const data = (await res.json()) as {
       challenge_id: string;
-      challenge_text: string;
+      challenge: string;
     };
     return {
       challengeId: data.challenge_id,
-      challengeText: data.challenge_text,
+      challengeText: data.challenge,
     };
   }
 
@@ -78,7 +86,7 @@ export class RegistryClient {
     challengeId: string,
     signature: string,
   ): Promise<string> {
-    const res = await fetch(`${this.baseUrl}/v1/auth/verify`, {
+    const res = await fetch(`${this.baseUrl}/v1/auth/wallet`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
