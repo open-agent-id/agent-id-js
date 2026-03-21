@@ -14,6 +14,18 @@ ed.etc.sha512Sync = (...m: Uint8Array[]) => {
 
 /**
  * Generate a new Ed25519 keypair.
+ *
+ * Uses a cryptographically secure random private key (32-byte seed) and
+ * derives the corresponding public key.
+ *
+ * @returns An object containing the `privateKey` (32-byte seed) and `publicKey` (32 bytes)
+ *
+ * @example
+ * ```ts
+ * const { publicKey, privateKey } = generateEd25519Keypair();
+ * // publicKey: Uint8Array(32) -- encode with base64urlEncode() for API calls
+ * // privateKey: Uint8Array(32) -- store securely, never share
+ * ```
  */
 export function generateEd25519Keypair(): {
   privateKey: Uint8Array;
@@ -25,7 +37,14 @@ export function generateEd25519Keypair(): {
 }
 
 /**
- * Sign data with an Ed25519 private key (32-byte seed).
+ * Sign data with an Ed25519 private key.
+ *
+ * Accepts either a 32-byte seed or a 64-byte expanded secret key.
+ * If 64 bytes are provided, only the first 32 (the seed) are used.
+ *
+ * @param privateKey - Ed25519 private key (32-byte seed or 64-byte expanded key)
+ * @param data - The data bytes to sign
+ * @returns The 64-byte Ed25519 signature
  */
 export function ed25519Sign(
   privateKey: Uint8Array,
@@ -38,6 +57,14 @@ export function ed25519Sign(
 
 /**
  * Verify an Ed25519 signature.
+ *
+ * Returns `false` (rather than throwing) if the signature is malformed
+ * or does not match.
+ *
+ * @param publicKey - The signer's 32-byte Ed25519 public key
+ * @param data - The original data bytes that were signed
+ * @param signature - The 64-byte Ed25519 signature to verify
+ * @returns `true` if the signature is valid, `false` otherwise
  */
 export function ed25519Verify(
   publicKey: Uint8Array,
@@ -53,6 +80,18 @@ export function ed25519Verify(
 
 /**
  * Encode bytes to base64url (no padding).
+ *
+ * Produces the URL-safe base64 variant: `+` becomes `-`, `/` becomes `_`,
+ * and trailing `=` padding is removed.
+ *
+ * @param data - The bytes to encode
+ * @returns The base64url-encoded string
+ *
+ * @example
+ * ```ts
+ * const encoded = base64urlEncode(publicKey);
+ * // Use in API calls: { public_key: encoded }
+ * ```
  */
 export function base64urlEncode(data: Uint8Array): string {
   let binary = "";
@@ -64,7 +103,17 @@ export function base64urlEncode(data: Uint8Array): string {
 }
 
 /**
- * Decode base64url string to bytes.
+ * Decode a base64url string to bytes.
+ *
+ * Handles the URL-safe base64 variant and re-adds padding as needed.
+ *
+ * @param s - The base64url-encoded string to decode
+ * @returns The decoded bytes
+ *
+ * @example
+ * ```ts
+ * const publicKey = base64urlDecode(agent.public_key);
+ * ```
  */
 export function base64urlDecode(s: string): Uint8Array {
   let base64 = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -80,7 +129,10 @@ export function base64urlDecode(s: string): Uint8Array {
 }
 
 /**
- * Compute SHA-256 of data, returned as lowercase hex string.
+ * Compute SHA-256 of data, returned as a lowercase hex string.
+ *
+ * @param data - The bytes to hash
+ * @returns The SHA-256 digest as a lowercase hex string (64 characters)
  */
 export function sha256(data: Uint8Array): string {
   const hash = sha256Hash(data);
@@ -89,6 +141,17 @@ export function sha256(data: Uint8Array): string {
 
 /**
  * Generate a random hex nonce of the given byte length.
+ *
+ * Uses `crypto.getRandomValues()` for cryptographically secure randomness.
+ *
+ * @param byteLength - Number of random bytes (default: 16, producing a 32-character hex string)
+ * @returns A hex-encoded random nonce string
+ *
+ * @example
+ * ```ts
+ * const nonce = generateNonce();    // 32 hex chars (16 bytes)
+ * const long = generateNonce(32);   // 64 hex chars (32 bytes)
+ * ```
  */
 export function generateNonce(byteLength: number = 16): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
@@ -101,6 +164,13 @@ export function generateNonce(byteLength: number = 16): string {
 
 /**
  * Convert an Ed25519 public key to an X25519 public key for encryption.
+ *
+ * Required for NaCl box encryption, which uses X25519 key agreement
+ * rather than Ed25519 signing keys.
+ *
+ * @param ed25519Pub - A 32-byte Ed25519 public key
+ * @returns The corresponding 32-byte X25519 public key
+ * @throws Error if the conversion fails (e.g., invalid key)
  */
 export function ed25519ToX25519Public(ed25519Pub: Uint8Array): Uint8Array {
   const result = ed2curve.convertPublicKey(ed25519Pub);
@@ -116,6 +186,10 @@ export function ed25519ToX25519Public(ed25519Pub: Uint8Array): Uint8Array {
  * Accepts either a 32-byte seed or a 64-byte expanded secret key.
  * If a 32-byte seed is provided it is first expanded via
  * `nacl.sign.keyPair.fromSeed`.
+ *
+ * @param ed25519Priv - Ed25519 private key (32-byte seed or 64-byte expanded key)
+ * @returns The corresponding 32-byte X25519 private key
+ * @throws Error if the conversion fails
  */
 export function ed25519ToX25519Private(ed25519Priv: Uint8Array): Uint8Array {
   const sk64 =
@@ -132,7 +206,24 @@ export function ed25519ToX25519Private(ed25519Priv: Uint8Array): Uint8Array {
 /**
  * Encrypt plaintext for a recipient using NaCl box (X25519-XSalsa20-Poly1305).
  *
- * Returns `[24-byte nonce][ciphertext + 16-byte MAC]`.
+ * Automatically converts Ed25519 keys to X25519 for the key agreement.
+ * Returns the nonce prepended to the ciphertext: `[24-byte nonce][ciphertext + 16-byte MAC]`.
+ *
+ * @param plaintext - The data to encrypt
+ * @param recipientEd25519Pub - Recipient's 32-byte Ed25519 public key
+ * @param senderEd25519Priv - Sender's Ed25519 private key (32-byte seed or 64-byte expanded)
+ * @returns The encrypted payload with prepended nonce
+ * @throws Error if encryption fails
+ *
+ * @example
+ * ```ts
+ * const encrypted = encryptFor(
+ *   new TextEncoder().encode("hello agent"),
+ *   recipientPublicKey,
+ *   senderPrivateKey,
+ * );
+ * // Send base64urlEncode(encrypted) to the recipient
+ * ```
  */
 export function encryptFor(
   plaintext: Uint8Array,
@@ -156,7 +247,21 @@ export function encryptFor(
  * Decrypt ciphertext from a sender using NaCl box.
  *
  * The ciphertext must include the 24-byte nonce prefix (standard NaCl box
- * format). Returns `null` if decryption fails (wrong key / tampered data).
+ * format produced by {@link encryptFor}). Returns `null` if decryption fails
+ * (wrong key or tampered data).
+ *
+ * @param ciphertext - The encrypted payload with prepended 24-byte nonce
+ * @param senderEd25519Pub - Sender's 32-byte Ed25519 public key
+ * @param recipientEd25519Priv - Recipient's Ed25519 private key (32-byte seed or 64-byte expanded)
+ * @returns The decrypted plaintext bytes, or `null` if decryption fails
+ *
+ * @example
+ * ```ts
+ * const plaintext = decryptFrom(encrypted, senderPublicKey, recipientPrivateKey);
+ * if (plaintext) {
+ *   console.log(new TextDecoder().decode(plaintext)); // "hello agent"
+ * }
+ * ```
  */
 export function decryptFrom(
   ciphertext: Uint8Array,
