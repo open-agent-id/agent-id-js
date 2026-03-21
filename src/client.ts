@@ -28,6 +28,8 @@ export interface CreditInfo {
   flagged: boolean;
   active_reports: number;
   lifetime_reports: number;
+  active_referrals: number;
+  lifetime_referrals: number;
   registered_at: string;
 }
 
