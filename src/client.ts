@@ -11,12 +11,13 @@ export interface AgentInfo {
   platform?: string;
   endpoint?: string;
   endpoint_type?: string;
-  status: "active" | "revoked";
   chain_status: "pending" | "submitted" | "anchored";
   chain_tx_hash?: string | null;
+  chain_anchor_block?: number | null;
+  chain_confirmations?: number;
   nonce?: number;
   wallet_deployed?: boolean;
-  credit_score?: number;
+  credit_score: number;
   referred_by?: string;
   created_at: string;
   updated_at: string;
@@ -239,6 +240,69 @@ export class RegistryClient {
     }
 
     return (await res.json()) as AgentInfo;
+  }
+
+  /**
+   * Rotate an agent's Ed25519 public key.
+   */
+  async rotateKey(
+    did: string,
+    token: string,
+    publicKey: string,
+  ): Promise<AgentInfo> {
+    const res = await fetch(
+      `${this.baseUrl}/v1/agents/${encodeURIComponent(did)}/key`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ public_key: publicKey }),
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Key rotation failed (${res.status}): ${await res.text()}`,
+      );
+    }
+
+    return (await res.json()) as AgentInfo;
+  }
+
+  /**
+   * Deploy the agent's smart contract wallet.
+   */
+  async deployWallet(
+    did: string,
+    token: string,
+  ): Promise<{
+    wallet_deployed: boolean;
+    agent_address: string;
+    tx_hash?: string;
+  }> {
+    const res = await fetch(
+      `${this.baseUrl}/v1/agents/${encodeURIComponent(did)}/deploy-wallet`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Wallet deployment failed (${res.status}): ${await res.text()}`,
+      );
+    }
+
+    return (await res.json()) as {
+      wallet_deployed: boolean;
+      agent_address: string;
+      tx_hash?: string;
+    };
   }
 
   /**
