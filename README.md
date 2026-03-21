@@ -48,15 +48,15 @@ const client = new RegistryClient(); // defaults to https://api.openagentid.org
 |---|---|---|
 | `client.requestChallenge(walletAddress)` | No | Request a wallet auth challenge |
 | `client.verifyWallet(walletAddress, challengeId, signature)` | No | Verify wallet signature, returns auth token |
-| `client.registerAgent(token, agentData)` | Yes | Register a new agent (accepts optional `referredBy` DID) |
+| `client.registerAgent(token, opts)` | Yes | Register a new agent (`opts: { name, publicKey, capabilities? }`) |
 | `client.getAgent(did)` | No | Look up an agent by DID |
-| `client.listAgents(token)` | Yes | List agents owned by the authenticated wallet |
-| `client.updateAgent(token, did, updates)` | Yes | Update agent metadata |
-| `client.revokeAgent(token, did)` | Yes | Revoke an agent identity |
-| `client.rotateKey(token, did, newPublicKey)` | Yes | Rotate an agent's public key |
-| `client.deployWallet(token, did)` | Yes | Deploy an on-chain smart wallet for an agent |
+| `client.listAgents(token, opts?)` | Yes | List agents owned by the authenticated wallet |
+| `client.updateAgent(did, auth, updates)` | Yes | Update agent metadata |
+| `client.revokeAgent(did, token)` | Yes | Revoke an agent identity |
+| `client.rotateKey(did, token, publicKey)` | Yes | Rotate an agent's public key |
+| `client.deployWallet(did, token)` | Yes | Deploy an on-chain smart wallet for an agent |
 | `client.getCredit(did)` | No | Look up an agent's credit score |
-| `client.verifySignature(did, signature, payload)` | No | Verify a signature against the agent's registered key |
+| `client.verifySignature(did, domain, payload, signature)` | No | Verify a signature against the agent's registered key |
 
 ### Wallet auth flow
 
@@ -76,9 +76,8 @@ const token = await client.verifyWallet(walletAddress, challengeId, walletSignat
 ```typescript
 const agent = await client.registerAgent(token, {
   name: "my-agent",
-  capabilities: ["search", "summarize"],
   publicKey: base64urlPublicKey,
-  referredBy: "did:oaid:base:0xaaaa...", // optional referral
+  capabilities: ["search", "summarize"],
 });
 ```
 
@@ -86,23 +85,23 @@ const agent = await client.registerAgent(token, {
 
 ```typescript
 const info = await client.getAgent("did:oaid:base:0x1234...");
-const agents = await client.listAgents(token);
+const { agents, nextCursor } = await client.listAgents(token);
 ```
 
 ### Manage agents
 
 ```typescript
-await client.updateAgent(token, did, { name: "new-name" });
-await client.rotateKey(token, did, newPublicKey);
-await client.revokeAgent(token, did);
-await client.deployWallet(token, did);
+await client.updateAgent(did, { token }, { name: "new-name" });
+await client.rotateKey(did, token, newPublicKey);
+await client.revokeAgent(did, token);
+await client.deployWallet(did, token);
 ```
 
 ## Credit Score
 
 ```typescript
 const credit = await client.getCredit("did:oaid:base:0x1234567890abcdef1234567890abcdef12345678");
-console.log(credit.creditScore); // 300
+console.log(credit.credit_score); // 300
 console.log(credit.level);       // "verified"
 ```
 
