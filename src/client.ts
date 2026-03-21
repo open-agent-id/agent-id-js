@@ -29,12 +29,11 @@ export interface CreditInfo {
   level: string;
   verified: boolean;
   flagged: boolean;
-  active_reports: number;
-  lifetime_reports: number;
-  active_referrals: number;
-  lifetime_referrals: number;
-  reports_filed: number;
-  reports_filed_verified: number;
+  reported_1y: number;
+  reported_total: number;
+  referrals_1y: number;
+  referrals_total: number;
+  reports_submitted: number;
   registered_at: string;
 }
 
