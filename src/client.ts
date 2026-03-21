@@ -33,6 +33,8 @@ export interface CreditInfo {
   lifetime_reports: number;
   active_referrals: number;
   lifetime_referrals: number;
+  reports_filed: number;
+  reports_filed_verified: number;
   registered_at: string;
 }
 
