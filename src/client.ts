@@ -16,6 +16,8 @@ export interface AgentInfo {
   chain_tx_hash?: string | null;
   nonce?: number;
   wallet_deployed?: boolean;
+  credit_score?: number;
+  referred_by?: string;
   created_at: string;
   updated_at: string;
 }
@@ -115,13 +117,13 @@ export class RegistryClient {
    */
   async registerAgent(
     token: string,
-    opts: { name: string; capabilities?: string[]; publicKey?: string },
+    opts: { name: string; publicKey: string; capabilities?: string[] },
   ): Promise<AgentInfo> {
     const body: Record<string, unknown> = {
       name: opts.name,
+      public_key: opts.publicKey,
     };
     if (opts.capabilities) body.capabilities = opts.capabilities;
-    if (opts.publicKey) body.public_key = opts.publicKey;
 
     const res = await fetch(`${this.baseUrl}/v1/agents`, {
       method: "POST",

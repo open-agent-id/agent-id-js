@@ -4,6 +4,8 @@ export type { ParsedDid } from "./did.js";
 
 // Signing
 export {
+  signAgentAuth,
+  verifyAgentAuth,
   signHttpRequest,
   verifyHttpSignature,
   signMessage,

@@ -50,6 +50,46 @@ function sortKeys(val: unknown): unknown {
 }
 
 /**
+ * Sign agent authentication headers for the registry API.
+ *
+ * Uses the simple payload format: {did}\n{timestamp}\n{nonce}
+ */
+export function signAgentAuth(
+  did: string,
+  privateKey: Uint8Array,
+  timestamp?: number,
+  nonce?: string,
+): Record<string, string> {
+  const ts = timestamp ?? Math.floor(Date.now() / 1000);
+  const n = nonce ?? generateNonce(16);
+  const payload = encoder.encode(`${did}\n${ts}\n${n}`);
+  const signature = ed25519Sign(privateKey, payload);
+  return {
+    "X-Agent-DID": did,
+    "X-Agent-Timestamp": String(ts),
+    "X-Agent-Nonce": n,
+    "X-Agent-Signature": base64urlEncode(signature),
+  };
+}
+
+/**
+ * Verify agent authentication headers from the registry API.
+ *
+ * Reconstructs the simple payload {did}\n{timestamp}\n{nonce} and verifies
+ * the Ed25519 signature. Does *not* check timestamp freshness.
+ */
+export function verifyAgentAuth(
+  publicKey: Uint8Array,
+  did: string,
+  timestamp: number,
+  nonce: string,
+  signature: Uint8Array,
+): boolean {
+  const payload = encoder.encode(`${did}\n${timestamp}\n${nonce}`);
+  return ed25519Verify(publicKey, payload, signature);
+}
+
+/**
  * Sign an HTTP request and return the authentication headers.
  *
  * Canonical payload:
